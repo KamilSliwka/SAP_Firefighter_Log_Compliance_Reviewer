@@ -135,3 +135,67 @@ class Rule002ModuleMismatch(ComplianceRule):
             print(f"WARNING: Rule R-002 LLM evaluation failed: {e}")
 
         return findings
+    
+class LLMEmergencyEvaluation(BaseModel):
+    """Pydantic model to parse the LLM's response for rule R-007."""
+    is_genuine_emergency: bool
+    explanation: str
+
+class Rule007BusinessHours(ComplianceRule):
+    """
+    R-007: Session occurred outside business hours AND reason does not indicate an actual emergency.
+    Severity: medium
+    """
+    def __init__(self):
+        self.llm = LLMClient()
+
+    @property
+    def rule_id(self) -> str:
+        return "R-007"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        reason = session.reason_code.strip() if session.reason_code else ""
+        
+        start_dt = session.start_time
+        
+        is_weekend = start_dt.weekday() >= 5
+        is_night = start_dt.hour < 8 or start_dt.hour >= 18
+        
+        if not (is_weekend or is_night):
+            return findings
+
+        system_prompt = (
+            "You are a strict SOX compliance auditor. "
+            "This SAP Firefighter session was initiated OUTSIDE normal business hours (night or weekend). "
+            "Emergency access during these hours is heavily restricted. "
+            "Evaluate the stated reason. Set 'is_genuine_emergency' to true ONLY IF the reason describes "
+            "a critical, time-sensitive issue that absolutely could not wait until the next business morning "
+            "(e.g., 'system down', 'production database crash', 'blocked critical financial run'). "
+            "Set it to false if the reason describes routine maintenance, standard testing, or administrative work "
+            "(e.g., 'updating user roles', 'testing new feature', 'routine data load')."
+        )
+        
+        user_prompt = f"Stated Reason for out-of-hours access: '{reason}'"
+
+        try:
+            evaluation: LLMEmergencyEvaluation = self.llm.analyze_with_structured_output(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_model=LLMEmergencyEvaluation
+            )
+
+            if not evaluation.is_genuine_emergency:
+                time_context = "weekend" if is_weekend else "night/out-of-hours"
+                findings.append(Finding(
+                    rule_id=self.rule_id,
+                    severity="medium",
+                    location=f"start_time ({start_dt.isoformat()})",
+                    description=f"Session occurred during {time_context}, but the reason does not justify an out-of-hours emergency. {evaluation.explanation}",
+                    evidence=f"Time: {start_dt.strftime('%Y-%m-%d %H:%M:%S')} UTC, Reason: '{reason}'"
+                ))
+                
+        except Exception as e:
+            print(f"WARNING: Rule R-007 LLM evaluation failed: {e}")
+
+        return findings
