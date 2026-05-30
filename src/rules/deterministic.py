@@ -55,3 +55,33 @@ class Rule008SelfApproval(ComplianceRule):
             findings.append(finding)
             
         return findings   
+    
+class Rule009SessionDuration(ComplianceRule):
+    """
+    R-009: Session duration exceeds the auto-extend limit (e.g., 4 hours).
+    Severity: medium
+    """
+    
+    @property
+    def rule_id(self) -> str:
+        return "R-009"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        
+        # Calculate duration
+        duration = session.end_time - session.start_time
+        duration_hours = duration.total_seconds() / 3600
+        
+        # We assume 4 hours is the strict limit for a single unextended session
+        if duration_hours > 4.0:
+            finding = Finding(
+                rule_id=self.rule_id,
+                severity="medium",
+                location="end_time",
+                description=f"Session duration ({duration_hours:.2f} hours) exceeds the standard 4-hour limit without documented re-justification.",
+                evidence=f"Start: {session.start_time}, End: {session.end_time}"
+            )
+            findings.append(finding)
+            
+        return findings
