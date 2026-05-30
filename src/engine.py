@@ -9,6 +9,7 @@ from src.rules.deterministic import (
     Rule003DebugReplace,
     Rule010SoDConflicts
 )
+from src.rules.semantic import Rule001ReasonQuality
 
 class ReviewEngine:
     """
@@ -21,7 +22,8 @@ class ReviewEngine:
             Rule008SelfApproval(),
             Rule009SessionDuration(),
             Rule003DebugReplace(),
-            Rule010SoDConflicts()
+            Rule010SoDConflicts(),
+            Rule001ReasonQuality()
         ]
 
     def _determine_verdict(self, findings: List[Finding]) -> str:
