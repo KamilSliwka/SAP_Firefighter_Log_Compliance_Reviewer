@@ -149,3 +149,33 @@ class Rule010SoDConflicts(ComplianceRule):
                 findings.append(finding)
                 
         return findings
+    
+class Rule004DirectTableAccess(ComplianceRule):
+    """
+    R-004: Direct table modification in production (e.g., using SE16N, SE16, SM30).
+    Severity: critical
+    """
+    
+    def __init__(self):
+        self.restricted_tcodes = {"SE16N", "SE16", "SM30", "SE11"}
+
+    @property
+    def rule_id(self) -> str:
+        return "R-004"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        
+        for entry in session.transaction_log:
+            if entry.tcode.upper() in self.restricted_tcodes:
+                finding = Finding(
+                    rule_id=self.rule_id,
+                    severity="critical",
+                    location=f"transaction_log (Timestamp: {entry.timestamp})",
+                    description=f"Detected execution of a restricted direct table access tool ({entry.tcode.upper()}). "
+                                f"Direct modification of tables bypasses application controls and is severely restricted.",
+                    evidence=f"Executed T-Code: {entry.tcode}, Description: {entry.description}"
+                )
+                findings.append(finding)
+                
+        return findings
