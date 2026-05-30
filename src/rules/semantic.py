@@ -199,3 +199,67 @@ class Rule007BusinessHours(ComplianceRule):
             print(f"WARNING: Rule R-007 LLM evaluation failed: {e}")
 
         return findings
+    
+class LLMVolumeMismatchEvaluation(BaseModel):
+    """Pydantic model to parse the LLM's response for rule R-006."""
+    is_volume_suspicious: bool
+    explanation: str
+
+class Rule006VolumeMismatch(ComplianceRule):
+    """
+    R-006: Transaction count or change-document count exceeds reasonable threshold 
+    for the stated reason (e.g. 200+ vendor master changes for 'fix one vendor').
+    Severity: high
+    """
+    def __init__(self):
+        self.llm = LLMClient()
+        self.change_threshold = 20
+
+    @property
+    def rule_id(self) -> str:
+        return "R-006"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        reason = session.reason_code.strip() if session.reason_code else ""
+        
+        change_count = len(session.change_log)
+        
+        if change_count < self.change_threshold:
+            return findings
+
+        system_prompt = (
+            "You are an expert SAP SOX compliance auditor. Your task is to detect suspicious mass updates. "
+            "Compare the user's stated reason for emergency access with the ACTUAL volume of database changes performed. "
+            "Set 'is_volume_suspicious' to true IF the volume of changes is massively disproportionate "
+            "to the stated reason (e.g., the reason implies fixing a single issue/document/user, but hundreds of changes were made). "
+            "Set it to false if the reason explicitly justifies a mass update (e.g., 'mass update of pricing conditions', 'bulk user role assignment'). "
+            "Explain your reasoning concisely."
+        )
+        
+        user_prompt = (
+            f"Stated Reason: '{reason}'\n"
+            f"Actual Volume of Changes: {change_count} database row modifications.\n"
+            "Does this volume of changes contradict the scope implied by the reason?"
+        )
+
+        try:
+            evaluation: LLMVolumeMismatchEvaluation = self.llm.analyze_with_structured_output(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_model=LLMVolumeMismatchEvaluation
+            )
+
+            if evaluation.is_volume_suspicious:
+                findings.append(Finding(
+                    rule_id=self.rule_id,
+                    severity="high",
+                    location=f"change_log (Count: {change_count})",
+                    description=f"Suspicious volume of changes detected. {evaluation.explanation}",
+                    evidence=f"Reason: '{reason}', Actual Changes: {change_count}"
+                ))
+                
+        except Exception as e:
+            print(f"WARNING: Rule R-006 LLM evaluation failed: {e}")
+
+        return findings
