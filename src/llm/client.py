@@ -24,7 +24,7 @@ class LLMClient:
                 api_key=self.groq_key,
                 base_url="https://api.groq.com/openai/v1"
             )
-            self.model = "llama3-8b-8192" 
+            self.model = "llama-3.1-8b-instant"
         elif self.openai_key:
             print("INFO: Initializing LLM Client with OpenAI API (GPT-4o-mini)...")
             self.client = OpenAI(api_key=self.openai_key)
