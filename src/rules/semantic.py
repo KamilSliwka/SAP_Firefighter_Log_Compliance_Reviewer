@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 from src.models.input import SessionLog
 from src.models.output import Finding
@@ -66,5 +66,72 @@ class Rule001ReasonQuality(ComplianceRule):
                 
         except Exception as e:
             print(f"WARNING: Rule R-001 LLM evaluation failed: {e}")
+
+        return findings
+    
+
+class LLMModuleMismatchEvaluation(BaseModel):
+    """Pydantic model to parse the LLM's response for rule R-002."""
+    is_mismatch: bool
+    explanation: str
+
+class Rule002ModuleMismatch(ComplianceRule):
+    """
+    R-002: Reason code mentions one system/module but transactions touch a different one.
+    Severity: high
+    """
+    def __init__(self):
+        self.llm = LLMClient()
+
+    @property
+    def rule_id(self) -> str:
+        return "R-002"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        reason = session.reason_code.strip() if session.reason_code else ""
+        
+        if not reason or not session.transaction_log:
+            return findings
+
+        transactions_list = "\n".join([
+            f"- T-Code: {t.tcode}, Description: {t.description}" 
+            for t in session.transaction_log
+        ])
+
+        system_prompt = (
+            "You are an expert SAP SOX compliance auditor. Your task is to detect scope creep. "
+            "Compare the user's stated reason for emergency access with the actual transactions executed. "
+            "Set 'is_mismatch' to true ONLY IF there is a clear, severe contradiction "
+            "(e.g., the reason claims to fix an HR issue, but the user ran Financial or Security transactions). "
+            "If the transactions reasonably support the reason, set 'is_mismatch' to false. "
+            "Do not flag generic administrative t-codes (like SE38, SE16N, SM30) as mismatches UNLESS "
+            "they completely contradict the business context."
+        )
+        
+        user_prompt = (
+            f"Stated Reason: '{reason}'\n\n"
+            f"Executed Transactions:\n{transactions_list}\n\n"
+            "Does the executed activity blatantly contradict the stated reason?"
+        )
+
+        try:
+            evaluation: LLMModuleMismatchEvaluation = self.llm.analyze_with_structured_output(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_model=LLMModuleMismatchEvaluation
+            )
+
+            if evaluation.is_mismatch:
+                findings.append(Finding(
+                    rule_id=self.rule_id,
+                    severity="high",
+                    location="transaction_log",
+                    description=f"Scope mismatch detected between stated reason and executed transactions. {evaluation.explanation}",
+                    evidence=f"Reason: '{reason}', Executed mismatching t-codes."
+                ))
+                
+        except Exception as e:
+            print(f"WARNING: Rule R-002 LLM evaluation failed: {e}")
 
         return findings
