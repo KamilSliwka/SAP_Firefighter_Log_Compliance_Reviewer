@@ -85,3 +85,31 @@ class Rule009SessionDuration(ComplianceRule):
             findings.append(finding)
             
         return findings
+    
+class Rule003DebugReplace(ComplianceRule):
+    """
+    R-003: Session contains debug & replace activity (SM21 entries showing /h or debug).
+    Severity: critical
+    """
+    
+    @property
+    def rule_id(self) -> str:
+        return "R-003"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        
+        for entry in session.system_log:
+            if entry.type == "SM21":
+                msg_lower = entry.message.lower()
+                if "debug" in msg_lower or "/h" in msg_lower or "replace" in msg_lower:
+                    finding = Finding(
+                        rule_id=self.rule_id,
+                        severity="critical",
+                        location=f"system_log (Timestamp: {entry.timestamp})",
+                        description="Detected system logs indicating a debug session. 'Debug & Replace' activity cannot be ruled out.",
+                        evidence=f"Message: {entry.message}"
+                    )
+                    findings.append(finding)
+            
+        return findings
