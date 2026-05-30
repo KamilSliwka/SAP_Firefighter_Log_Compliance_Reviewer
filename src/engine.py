@@ -55,9 +55,13 @@ class ReviewEngine:
         all_findings: List[Finding] = []
         
         for rule in self.rules:
-            rule_findings = rule.evaluate(session)
-            all_findings.extend(rule_findings)
-            
+            try:
+                rule_findings = rule.evaluate(session)
+                if rule_findings:
+                    all_findings.extend(rule_findings)
+            except Exception as e:
+                print(f"ERROR: Rule {rule.rule_id} failed during evaluation of session {session.session_id}: {e}")
+                
         verdict_status = self._determine_verdict(all_findings)
         
         # Mocking confidence and suggested_correction for now.
