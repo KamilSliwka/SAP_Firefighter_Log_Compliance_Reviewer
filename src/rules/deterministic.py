@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Set, Tuple
 from src.models.input import SessionLog
 from src.models.output import Finding
 from src.rules.base import ComplianceRule
@@ -69,11 +69,9 @@ class Rule009SessionDuration(ComplianceRule):
     def evaluate(self, session: SessionLog) -> List[Finding]:
         findings = []
         
-        # Calculate duration
         duration = session.end_time - session.start_time
         duration_hours = duration.total_seconds() / 3600
         
-        # We assume 4 hours is the strict limit for a single unextended session
         if duration_hours > 4.0:
             finding = Finding(
                 rule_id=self.rule_id,
@@ -112,4 +110,42 @@ class Rule003DebugReplace(ComplianceRule):
                     )
                     findings.append(finding)
             
+        return findings
+    
+class Rule010SoDConflicts(ComplianceRule):
+    """
+    R-010: Transactions executed include known SoD-conflict pairs 
+    (e.g., vendor master maintenance + payment run in same session).
+    Severity: critical
+    """
+    
+    def __init__(self):
+        self.toxic_pairs: List[Tuple[str, str, str]] = [
+            ("BP", "F110", "Vendor Master Maintenance and Payment Run"),
+            ("XK01", "F110", "Vendor Creation and Payment Run"),
+            ("FK01", "F110", "Vendor Creation and Payment Run"),
+            ("ME21N", "MIGO", "Purchase Order Creation and Goods Receipt"),
+            ("VA01", "VF01", "Sales Order Creation and Billing")
+        ]
+
+    @property
+    def rule_id(self) -> str:
+        return "R-010"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        
+        executed_tcodes: Set[str] = {entry.tcode.upper() for entry in session.transaction_log}
+        
+        for tcode1, tcode2, conflict_desc in self.toxic_pairs:
+            if tcode1 in executed_tcodes and tcode2 in executed_tcodes:
+                finding = Finding(
+                    rule_id=self.rule_id,
+                    severity="critical",
+                    location="transaction_log",
+                    description=f"Segregation of Duties (SoD) conflict detected: {conflict_desc}.",
+                    evidence=f"Executed conflicting t-codes: {tcode1} and {tcode2} within the same session."
+                )
+                findings.append(finding)
+                
         return findings

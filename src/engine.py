@@ -6,7 +6,8 @@ from src.rules.deterministic import (
     Rule005OsCommands, 
     Rule008SelfApproval, 
     Rule009SessionDuration, 
-    Rule003DebugReplace
+    Rule003DebugReplace,
+    Rule010SoDConflicts
 )
 
 class ReviewEngine:
@@ -19,7 +20,8 @@ class ReviewEngine:
             Rule005OsCommands(),
             Rule008SelfApproval(),
             Rule009SessionDuration(),
-            Rule003DebugReplace()
+            Rule003DebugReplace(),
+            Rule010SoDConflicts()
         ]
 
     def _determine_verdict(self, findings: List[Finding]) -> str:
