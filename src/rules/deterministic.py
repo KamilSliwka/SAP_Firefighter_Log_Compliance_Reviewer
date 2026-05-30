@@ -29,3 +29,29 @@ class Rule005OsCommands(ComplianceRule):
             findings.append(finding)
             
         return findings
+    
+    
+class Rule008SelfApproval(ComplianceRule):
+    """
+    R-008: Firefighter user and the original ticket requester are the same person.
+    Severity: high
+    """
+    
+    @property
+    def rule_id(self) -> str:
+        return "R-008"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        
+        if session.ticket_requester and session.firefighter_user == session.ticket_requester:
+            finding = Finding(
+                rule_id=self.rule_id,
+                severity="high",
+                location="ticket_requester",
+                description="The firefighter user is the same as the ticket requester, indicating a self-approval pattern.",
+                evidence=f"User: {session.firefighter_user}, Requester: {session.ticket_requester}"
+            )
+            findings.append(finding)
+            
+        return findings   
