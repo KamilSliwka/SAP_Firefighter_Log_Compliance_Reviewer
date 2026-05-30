@@ -2,7 +2,12 @@ from typing import List
 from src.models.input import SessionLog
 from src.models.output import SessionVerdict, Finding
 from src.rules.base import ComplianceRule
-from src.rules.deterministic import Rule005OsCommands
+from src.rules.deterministic import (
+    Rule005OsCommands, 
+    Rule008SelfApproval, 
+    Rule009SessionDuration, 
+    Rule003DebugReplace
+)
 
 class ReviewEngine:
     """
@@ -12,8 +17,9 @@ class ReviewEngine:
     def __init__(self):
         self.rules: List[ComplianceRule] = [
             Rule005OsCommands(),
-            # Future rules will be easily added here:
-            
+            Rule008SelfApproval(),
+            Rule009SessionDuration(),
+            Rule003DebugReplace()
         ]
 
     def _determine_verdict(self, findings: List[Finding]) -> str:
