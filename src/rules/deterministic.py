@@ -124,9 +124,12 @@ class Rule010SoDConflicts(ComplianceRule):
             ("BP", "F110", "Vendor Master Maintenance and Payment Run"),
             ("XK01", "F110", "Vendor Creation and Payment Run"),
             ("FK01", "F110", "Vendor Creation and Payment Run"),
+            ("XK02", "F110", "Vendor Modification and Payment Run"),
+            ("FK02", "F110", "Vendor Modification and Payment Run"),
             ("ME21N", "MIGO", "Purchase Order Creation and Goods Receipt"),
             ("VA01", "VF01", "Sales Order Creation and Billing")
-        ]
+        ]    
+        
 
     @property
     def rule_id(self) -> str:
