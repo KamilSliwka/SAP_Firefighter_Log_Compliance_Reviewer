@@ -100,13 +100,13 @@ class Rule002ModuleMismatch(ComplianceRule):
         ])
 
         system_prompt = (
-            "You are an expert SAP SOX compliance auditor. Your task is to detect scope creep. "
-            "Compare the user's stated reason for emergency access with the actual transactions executed. "
-            "Set 'is_mismatch' to true ONLY IF there is a clear, severe contradiction "
-            "(e.g., the reason claims to fix an HR issue, but the user ran Financial or Security transactions). "
-            "If the transactions reasonably support the reason, set 'is_mismatch' to false. "
-            "Do not flag generic administrative t-codes (like SE38, SE16N, SM30) as mismatches UNLESS "
-            "they completely contradict the business context."
+            "You are an expert SAP SOX compliance auditor. Your task is to detect scope creep and mismatches. "
+            "Compare the user's stated reason with the actual executed transactions. "
+            "Set 'is_mismatch' to true IF ANY of the following 3 conditions are met:\n"
+            "1. Module Leakage: The reason mentions one module (e.g., HR, FI-only) but transactions belong to another (e.g., MM, Sales, or unrelated FI t-codes like FB02/XK02 for an HR issue).\n"
+            "2. Read vs. Write: The reason implies read-only action ('check', 'investigate', 'display') but actions include modifications, updates, or changes to tables (e.g., modifying T001).\n"
+            "3. Self-Incrimination: The reason explicitly admits to a Segregation of Duties violation (e.g., 'Updated vendor bank details AND triggered payment').\n"
+            "If none of these violations occur, set 'is_mismatch' to false. Be strict but logical."
         )
         
         user_prompt = (
