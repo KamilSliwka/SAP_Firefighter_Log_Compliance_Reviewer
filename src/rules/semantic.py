@@ -52,7 +52,8 @@ class Rule001ReasonQuality(ComplianceRule):
             evaluation: LLMReasonEvaluation = self.llm.analyze_with_structured_output(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                response_model=LLMReasonEvaluation
+                response_model=LLMReasonEvaluation,
+                tier="smart"
             )
 
             if evaluation.is_generic:
@@ -119,7 +120,8 @@ class Rule002ModuleMismatch(ComplianceRule):
             evaluation: LLMModuleMismatchEvaluation = self.llm.analyze_with_structured_output(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                response_model=LLMModuleMismatchEvaluation
+                response_model=LLMModuleMismatchEvaluation,
+                tier="smart"
             )
 
             if evaluation.is_mismatch:
@@ -182,7 +184,8 @@ class Rule007BusinessHours(ComplianceRule):
             evaluation: LLMEmergencyEvaluation = self.llm.analyze_with_structured_output(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                response_model=LLMEmergencyEvaluation
+                response_model=LLMEmergencyEvaluation,
+                tier="fast"
             )
 
             if not evaluation.is_genuine_emergency:
@@ -247,7 +250,8 @@ class Rule006VolumeMismatch(ComplianceRule):
             evaluation: LLMVolumeMismatchEvaluation = self.llm.analyze_with_structured_output(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                response_model=LLMVolumeMismatchEvaluation
+                response_model=LLMVolumeMismatchEvaluation,
+                tier="fast"
             )
 
             if evaluation.is_volume_suspicious:
