@@ -3,6 +3,7 @@ from src.models.input import SessionLog
 from src.models.output import Finding
 from src.rules.base import ComplianceRule
 
+
 class Rule005OsCommands(ComplianceRule):
     """
     R-005: Session contains OS-level commands (SM49).
@@ -180,5 +181,54 @@ class Rule004DirectTableAccess(ComplianceRule):
                     evidence=f"Executed T-Code: {entry.tcode}, Description: {entry.description}"
                 )
                 findings.append(finding)
+                
+        return findings
+    
+
+
+class Rule011CustomProgramMassChange:
+    """
+    R-011: Execution of a specialized Z/Y program or ABAP editor
+    when issuing a data change version (>10 records),
+    without explicitly using the name of that program in the session reason.
+    """
+    def __init__(self):
+        self.rule_id = "R-011"
+        self.severity = "high"
+        self.abap_executors = {"SE38", "SA38", "SE37"}
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        
+        suspicious_tcodes_used = set()
+        for entry in session.transaction_log:
+            tcode = entry.tcode.upper()
+            if tcode.startswith("Z") or tcode.startswith("Y") or tcode in self.abap_executors:
+                suspicious_tcodes_used.add(tcode)
+                
+        if not suspicious_tcodes_used:
+            return findings
+            
+        total_changes = len(session.change_log)
+        
+        if total_changes > 10:
+            reason_upper = session.reason_code.upper()
+            
+            undocumented_tcodes = [
+                tc for tc in suspicious_tcodes_used 
+                if tc not in reason_upper
+            ]
+            
+            if undocumented_tcodes:
+                findings.append(Finding(
+                    rule_id=self.rule_id,
+                    severity=self.severity,
+                    location="transaction_log & change_log",
+                    description=(
+                        f"Custom Z/Y program or ABAP editor executed resulting in mass changes "
+                        f"({total_changes} records), but the program name is not documented in the reason code."
+                    ),
+                    evidence=f"Used: {', '.join(undocumented_tcodes)} | Total Changes: {total_changes}"
+                ))
                 
         return findings
