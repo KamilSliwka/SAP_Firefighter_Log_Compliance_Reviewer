@@ -9,7 +9,8 @@ from src.rules.deterministic import (
     Rule003DebugReplace,
     Rule010SoDConflicts,
     Rule004DirectTableAccess,
-    Rule011CustomProgramMassChange
+    Rule011CustomProgramMassChange,
+    Rule012ActivityAfterLogoff
 )
 from src.rules.semantic import (
     Rule001ReasonQuality, 
@@ -35,7 +36,8 @@ class ReviewEngine:
             Rule007BusinessHours(),
             Rule006VolumeMismatch(),
             Rule004DirectTableAccess(),
-            Rule011CustomProgramMassChange()
+            Rule011CustomProgramMassChange(),
+            Rule012ActivityAfterLogoff()
         ]
 
     def _determine_verdict(self, findings: List[Finding]) -> str:

@@ -232,3 +232,38 @@ class Rule011CustomProgramMassChange:
                 ))
                 
         return findings
+    
+class Rule012ActivityAfterLogoff:
+    """
+    R-012: Activity after logoff (/NEX).
+    Detects transactions recorded in the log after a user has 
+    hard logged out of the system.
+    """
+    def __init__(self):
+        self.rule_id = "R-012"
+        self.severity = "high"
+
+    def evaluate(self, session: SessionLog) -> List[Finding]:
+        findings = []
+        nex_timestamp = None
+
+        for entry in session.transaction_log:
+            tcode = entry.tcode.upper()
+            
+            if tcode == "/NEX":
+                nex_timestamp = entry.timestamp
+                
+            elif nex_timestamp is not None:
+                findings.append(Finding(
+                    rule_id=self.rule_id,
+                    severity=self.severity,
+                    location="transaction_log",
+                    description=(
+                        "Transaction executed after a hard logoff (/NEX) was recorded. "
+                        "This indicates log tampering, incomplete session capture, or session hijacking."
+                    ),
+                    evidence=f"Logoff recorded at {nex_timestamp}, but '{tcode}' executed subsequently at {entry.timestamp}"
+                ))
+                break
+
+        return findings
