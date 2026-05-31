@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 class TransactionLogEntry(BaseModel):
     timestamp: datetime
@@ -52,4 +52,15 @@ class SessionLog(BaseModel):
         if not logs:
             return logs
         
-        return sorted(logs, key=lambda entry: entry.timestamp)
+        def get_universal_time(entry):
+            dt = entry.timestamp
+            
+            if isinstance(dt, str):
+                dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+            
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+                
+            return dt.astimezone(timezone.utc)
+
+        return sorted(logs, key=get_universal_time)
