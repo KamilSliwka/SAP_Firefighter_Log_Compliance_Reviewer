@@ -184,7 +184,6 @@ All additional rules were derived from Exploratory Data Analysis of the provided
 |---|---|
 | **Severity** | high |
 | **Implementation** | Deterministic |
-| **Source in data** | `FF-TEST-0002`: user executes `ZVENDOR_WHT_UPDATE` via `SE38`, modifying 100 records in table `LFB1` (withholding tax codes) in under 3 minutes |
 | **What it checks** | `transaction_log` contains a tcode starting with `Z`/`Y` or one of `SE38`, `SA38`, `SE37`, AND `len(change_log) > 10`, AND no mention of the program name in `reason_code` |
 | **Why it matters** | Custom ABAP programs bypass all standard SAP application-layer validations, audit trails, and authorization checks. A firefighter can write `Z_EDIT_ANYTHING` and modify any table in any volume. This is the primary bypass vector for R-004. The firefighter's reason must explicitly name the program being executed and the scope of records affected |
 | **Not covered** | SAP-delivered mass-processing programs (`MASS`, `LSMW`) which have their own approval workflows |
@@ -194,7 +193,6 @@ All additional rules were derived from Exploratory Data Analysis of the provided
 |---|---|
 | **Severity** | high |
 | **Implementation** | Deterministic — relies on Pydantic chronological sort |
-| **Source in data** | `FF-TEST-0006`, `FF-TEST-0007`, `FF-TEST-0009`, `FF-TEST-0010` — all contain transactions timestamped after a `/NEX` (hard session kill) entry. The most extreme case is `FF-TEST-0010` where BMEYER logs off at 15:22 and activity continues until 18:37 |
 | **What it checks** | Whether any `transaction_log` entry has a timestamp strictly after the first `/NEX` entry in the same log |
 | **Why it matters** | `/NEX` is an unconditional SAP GUI session termination. Subsequent logged activity indicates one of: (1) log tampering / manual JSON modification, (2) a parallel session running under the same FFID that was not captured in this log, or (3) a "zombie" background process. All three are integrity violations. This rule has a known interpretation challenge: SAP can log multiple concurrent windows under one session ID — see Known Failure Modes |
 | **Not covered** | Activity in a legitimately separate re-login after `/NEX` that shares the same `session_id` due to a logging system defect |
@@ -318,7 +316,7 @@ R-011 and R-012 generate **13 false positives combined** (5 + 8) against the gol
 
 **What happens:** SAP allows a user to open multiple browser tabs or GUI windows under the same session context. When this occurs, the system logs all window activity under a single `session_id`. A user who legitimately logs out of Window A (`/NEX`) but continues working in Window B will trigger R-012, even though their behavior is technically within the firefighter session scope.
 
-**Real example:** `FF-TEST-0010` — BMEYER executes `/NEX` at 15:22 but continues with `OB52` and `FBL3N` until 18:37. This is flagged as post-logoff tampering, but may be a legitimate second window investigating the same issue.
+**Real example:** user executes `/NEX` at 15:22 but continues with `OB52` and `FBL3N` until 18:37. This is flagged as post-logoff tampering, but may be a legitimate second window investigating the same issue.
 
 **Why we can't fix it deterministically:** Distinguishing single-window logoff from multi-window continuation requires GUI session metadata that is not present in the standard firefighter JSON log format.
 
@@ -428,7 +426,7 @@ python -m src.batch_predict data/train/sessions/ predictions_train.jsonl
 ```bash
 python data/eval.py \
   --predictions predictions_train.jsonl \
-  --labels data/test/labels.jsonl
+  --labels data/train/labels.jsonl
 ```
 
 Note on test data in repository: The labeled evaluation dataset (data/) is intentionally committed to this repository. In a production setting, evaluation data — especially if it contains client session logs — would never be stored in version control. I made an exception here because the dataset was supplied as part of the task and committing it allows to reproduce all reported metrics with a single command without any additional setup.
