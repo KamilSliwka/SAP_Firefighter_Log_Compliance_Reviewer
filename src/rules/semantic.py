@@ -53,7 +53,7 @@ class Rule001ReasonQuality(ComplianceRule):
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 response_model=LLMReasonEvaluation,
-                tier="fast"
+                tier="smart"
             )
 
             if evaluation.is_generic:
@@ -121,7 +121,7 @@ class Rule002ModuleMismatch(ComplianceRule):
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 response_model=LLMModuleMismatchEvaluation,
-                tier="fast"
+                tier="smart"
             )
 
             if evaluation.is_mismatch:
